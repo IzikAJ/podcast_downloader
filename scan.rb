@@ -3,4 +3,6 @@
 require 'mechanize'
 require_relative 'yaml_data'
 
-puts YamlData.get_hash_file('config.yml')
+sources = YamlData.get_hash_file('sources.yml')
+
+puts sources
