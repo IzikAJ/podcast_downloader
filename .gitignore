@@ -1,0 +1,5 @@
+*.log
+*.tmp
+*.yml
+out/
+.DS_Store
