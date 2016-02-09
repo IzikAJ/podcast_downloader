@@ -1,0 +1,25 @@
+rwpod:
+  points: [
+    'http://www.rwpod.com/'
+  ]
+  ets: 455
+  # /posts/2016.html
+  pages: [
+    '/posts/\d{4}\.html'
+  ]
+  # /posts/2016/02/01/podcast-04-04.html
+  posts: [
+    '/posts/\d{4}/\d{2}/\d{2}/podcast.*\.html'
+  ]
+  details:
+    title: ['.article .content h1']
+    file: ['.article .content .track-details a']
+    content: ['.article .content .row + hr + .row > *']
+    version: [
+      { find: '.article .header.row .left', regex: '\d{2}\s+\S+\s+(\d{2})\s+\S+' },
+      { find: '.article .header.row .left', regex: '(\d{2})\s+\S+\s+\d{2}\s+\S+' },
+    ]
+    date: [
+      { find: '.article .header.row .right'}
+    ]
+
