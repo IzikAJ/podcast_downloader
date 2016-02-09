@@ -1,5 +1,5 @@
 *.log
 *.tmp
 *.yml
-out/
+out/*.mp3
 .DS_Store
