@@ -80,16 +80,75 @@ class Crawler
     list
   end
 
+
+  def search_for page, find, &block
+    case find
+    when String
+      items = page.search(find)
+      items = block.call(items) if block_given?
+    when Hash
+      # find, regex
+      if find[:find].nil? || find[:find].empty?
+        items = page.search("html")
+      else
+        items = page.search(find[:find])
+      end
+      items = block.call(items) if block_given?
+      unless find[:regex].nil? || find[:regex].empty?
+        items = items.map do |i|
+          match = i.to_s.scan(/#{find[:regex]}/)
+            .map {|i| i.is_a?(Array)? i.last : i}.join(' ')
+        end
+        items = Nokogiri::HTML(items.join(' ')).search('body').children
+      end
+    when Array
+      items = nil
+      find.each do |f|
+        ff = search_for(page, f, &block)
+        unless items
+          items = ff
+        else
+          items += ff
+        end
+      end
+    else
+      items = page
+    end
+    items
+  end
+
   def get_items_list
     items = []
     posts = get_posts_list
+
+
     posts.each do |post|
+      puts "Scaning page [#{post}] for content"
       @browser.get(post) do |page|
-        
+        title = search_for(page, @source[:details][:title]).text
+        content = search_for(page, @source[:details][:content]).to_html
+
+        files = search_for(page, @source[:details][:file]).map { |l| l.attr(:href) }
+
+        date = search_for(page, @source[:details][:date]).text
+        version = search_for(page, @source[:details][:version]).map(&:text).map(&:to_i)
+
+        puts "#{version} on #{date}"
+        puts "Loaded[#{files.size} files]: #{title}"
+        items << {
+          title: title,
+          content: content,
+          files: files,
+          date: date,
+          version: version
+        }
       end
     end
+    items
   end
 end
 
 c = Crawler.new(:rwpod)
-puts c.get_posts_list
+list = c.get_items_list
+
+YamlData.put_hash_file File.join(File.dirname(__FILE__), 'out', 'dst.yml'), list
