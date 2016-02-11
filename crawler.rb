@@ -1,43 +1,25 @@
 #!/usr/bin/env ruby
-require 'mechanize'
-require_relative 'yaml_data'
-
-# data:
-#   urls:
-#     pages: ['', '', '']
-#     posts: ['', '', '']
-#   items:
-#     title: ""
-#     content: ""
-#     urls: [""]
+require_relative File.join('config', 'application.rb')
 
 # sources = YamlData.get_hash_file('sources.yml')
 class Crawler
-  @@root = File.dirname(__FILE__)
-
-  def self.get_source(key)
-    source = YamlData.get_hash_file(File.join(@@root, 'sources.yml'))[key]
-    raise "Ooops... Source not found..." if source.nil?
-    source
-  end
-
-  def self.get_data(key)
-    data = YamlData.get_hash_file(File.join(@@root, 'out', "#{key}.yml")) ||
-    puts('Ooops... Data not found...') if data.nil?
-    data ||= { urls: { pages: [], posts: [] }, items: [] }
-    data
-  end
-
   def initialize(source_key)
     @key = source_key
-    @source = Crawler.get_source(source_key)
-    @data = Crawler.get_data(source_key)
+    @config = @sources[source_key]
+    raise 'Source not found' unless @source
+    @slug = @config[:slug] || source_key
+    @title = @config[:title]
+
+    @source = Source.first_or_create(slug: slug)
+    update_source if @source.title.empty?
+
+    @description = @config[:description]
     @browser = Mechanize.new do |agent|
       agent.user_agent_alias = 'Mac Safari'
     end
   end
 
-  def get_posts_list
+  def posts_list
     scanned = []
     list = []
     pull = get_pages_list
@@ -48,7 +30,7 @@ class Crawler
       @browser.get(curr) do |page|
         puts "scaning #{curr} for posts"
         filtered = page.links.map{|l| l && l.href}.select() do |l|
-          @source[:posts].select{ |r| /#{r}/i =~ l }.size > 0 
+          @config[:posts].select{ |r| /#{r}/i =~ l }.size > 0 
         end
         list += filtered
         list.uniq!
@@ -58,10 +40,10 @@ class Crawler
     list
   end
 
-  def get_pages_list
+  def pages_list key
     scanned = []
     list = []
-    pull = @source[:points].dup()
+    pull = @sources[key][:points].dup()
     puts "Updade pages list"
     while pull.size > 0
       curr = pull.shift
@@ -69,7 +51,7 @@ class Crawler
       @browser.get(curr) do |page|
         puts "scaning #{curr} for pages"
         filtered = page.links.map{|l| l && l.href}.select() do |l|
-          @source[:pages].select{ |r| /#{r}/i =~ l }.size > 0 
+          @config[:pages].select{ |r| /#{r}/i =~ l }.size > 0 
         end
         list += filtered
         pull += filtered
@@ -80,8 +62,7 @@ class Crawler
     list
   end
 
-
-  def search_for page, find, &block
+  def search_for(page, find, &block)
     case find
     when String
       items = page.search(find)
@@ -117,7 +98,7 @@ class Crawler
     items
   end
 
-  def get_items_list
+  def items_list
     items = []
     posts = get_posts_list
 
@@ -125,13 +106,13 @@ class Crawler
     posts.each do |post|
       puts "Scaning page [#{post}] for content"
       @browser.get(post) do |page|
-        title = search_for(page, @source[:details][:title]).text
-        content = search_for(page, @source[:details][:content]).to_html
+        title = search_for(page, @config[:details][:title]).text
+        content = search_for(page, @config[:details][:content]).to_html
 
-        files = search_for(page, @source[:details][:file]).map { |l| l.attr(:href) }
+        files = search_for(page, @config[:details][:file]).map { |l| l.attr(:href) }
 
-        date = search_for(page, @source[:details][:date]).text
-        version = search_for(page, @source[:details][:version]).map(&:text).map(&:to_i)
+        date = search_for(page, @config[:details][:date]).text
+        version = search_for(page, @config[:details][:version]).map(&:text).map(&:to_i)
 
         puts "#{version} on #{date}"
         puts "Loaded[#{files.size} files]: #{title}"
@@ -140,15 +121,48 @@ class Crawler
           content: content,
           files: files,
           date: date,
+          origin: post,
           version: version
         }
       end
     end
     items
   end
+
+  def sources
+    @sources ||= YamlData.get_hash_file(File.join(App.root, 'sources.yml'))
+  end
+
+  def update_source
+    @source.title = @config[:title]
+    @source.description = @config[:description]
+    @source.save
+  end
+
+  def update_items
+    items = Item.all(source: source)
+    remote = get_items_list
+    ident = items.select do |item|
+      remote.select do |r_item|
+        item.like_remote? && r_item[:item_id] = item.id
+      end.size > 0
+    end
+    removed = items - ident
+    added = remote.select{|r| r[:item_id].nil?}
+    updated = remote.select do |r_item|
+      !r_item[:item_id].nil?
+    end.map do |r_item|
+      items.first(id: r_item[:item_id])
+    end
+
+    
+
+    if Digest::MD5.hexdigest()
+  end
+
 end
 
 c = Crawler.new(:rwpod)
 list = c.get_items_list
 
-YamlData.put_hash_file File.join(File.dirname(__FILE__), 'out', 'dst.yml'), list
+# YamlData.put_hash_file File.join(File.dirname(__FILE__), 'out', 'dst.yml'), list
