@@ -5,13 +5,13 @@ require_relative File.join('config', 'application.rb')
 class Crawler
   def initialize(source_key)
     @key = source_key
-    @config = @sources[source_key]
-    raise 'Source not found' unless @source
+    @config = sources[source_key]
+    raise 'Source not found' unless @config
     @slug = @config[:slug] || source_key
     @title = @config[:title]
 
-    @source = Source.first_or_create(slug: slug)
-    update_source if @source.title.empty?
+    @source = Source.first_or_create(slug: @slug)
+    update_source if @source.title.nil? && @source.description.nil?
 
     @description = @config[:description]
     @browser = Mechanize.new do |agent|
@@ -22,7 +22,7 @@ class Crawler
   def posts_list
     scanned = []
     list = []
-    pull = get_pages_list
+    pull = pages_list
     puts "Updade posts list"
     while pull.size > 0
       curr = pull.shift
@@ -40,10 +40,10 @@ class Crawler
     list
   end
 
-  def pages_list key
+  def pages_list
     scanned = []
     list = []
-    pull = @sources[key][:points].dup()
+    pull = @config[:points].dup()
     puts "Updade pages list"
     while pull.size > 0
       curr = pull.shift
@@ -100,11 +100,10 @@ class Crawler
 
   def items_list
     items = []
-    posts = get_posts_list
+    posts = posts_list
 
-
-    posts.each do |post|
-      puts "Scaning page [#{post}] for content"
+    posts.each_with_index do |post, index|
+      # puts "Scaning page [#{post}] for content"
       @browser.get(post) do |page|
         title = search_for(page, @config[:details][:title]).text
         content = search_for(page, @config[:details][:content]).to_html
@@ -114,9 +113,8 @@ class Crawler
         date = search_for(page, @config[:details][:date]).text
         version = search_for(page, @config[:details][:version]).map(&:text).map(&:to_i)
 
-        puts "#{version} on #{date}"
-        puts "Loaded[#{files.size} files]: #{title}"
-        items << {
+        puts "#{index+1}/#{posts.size} > Item [#{files.size} files] at #{date}: #{title[0..50]}..."
+        item = {
           title: title,
           content: content,
           files: files,
@@ -124,45 +122,51 @@ class Crawler
           origin: post,
           version: version
         }
+        apply_item item
       end
     end
     items
   end
 
   def sources
-    @sources ||= YamlData.get_hash_file(File.join(App.root, 'sources.yml'))
+    @sources ||= YamlData.get_hash_file(File.join(App.root, 'config', 'sources.yml'))
   end
 
   def update_source
-    @source.title = @config[:title]
-    @source.description = @config[:description]
-    @source.save
+    @source.update(
+      title: @config[:title],
+      description: @config[:description]
+    )
+  end
+
+  def apply_item(remote)
+    item = Item.first(
+      origin: remote[:origin])
+    if item
+      if item.changed?(remote) && item.update_from_remote(remote)
+        @updated << item.id
+      end
+    else
+      item = Item.create_from_remote remote, @source
+      @added << item.id if item.saved?
+    end
   end
 
   def update_items
-    items = Item.all(source: source)
-    remote = get_items_list
-    ident = items.select do |item|
-      remote.select do |r_item|
-        item.like_remote? && r_item[:item_id] = item.id
-      end.size > 0
-    end
-    removed = items - ident
-    added = remote.select{|r| r[:item_id].nil?}
-    updated = remote.select do |r_item|
-      !r_item[:item_id].nil?
-    end.map do |r_item|
-      items.first(id: r_item[:item_id])
-    end
+    items = Item.all(source: @source)
+    @updated = []
+    @added = []
 
-    
+    remote_items = items_list
 
-    if Digest::MD5.hexdigest()
+    puts "Added #{@added.size} items"
+    puts "Updated #{@updated.size} items"
+
   end
 
 end
 
 c = Crawler.new(:rwpod)
-list = c.get_items_list
+list = c.update_items
 
 # YamlData.put_hash_file File.join(File.dirname(__FILE__), 'out', 'dst.yml'), list

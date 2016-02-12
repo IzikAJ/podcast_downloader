@@ -7,5 +7,7 @@ class Source
   property :slug,        String, required: true
   property :created_at,  DateTime
 
+  validates_uniqueness_of :slug
+
   has n, :items
 end

@@ -3,7 +3,7 @@ class FileItem
 
   property :id,         Serial
   property :item_id,    Integer, required: true
-  property :url,        String, required: true
+  property :url,        URI, required: true
   property :path,       FilePath
   property :loaded_at,  DateTime
   property :created_at, DateTime
