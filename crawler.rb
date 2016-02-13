@@ -166,7 +166,7 @@ class Crawler
 
 end
 
-c = Crawler.new(:rwpod)
-list = c.update_items
+# c = Crawler.new(:rwpod)
+# list = c.update_items
 
 # YamlData.put_hash_file File.join(File.dirname(__FILE__), 'out', 'dst.yml'), list

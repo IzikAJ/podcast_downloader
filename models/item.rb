@@ -25,9 +25,8 @@ class Item
   def update_from_remote remote
     urls = remote[:files] - file_items.map(&:url).map(&:to_s)
     urls.each do |url|
-      puts FileItem.create( item_id: id, url: url ).errors.inspect
+      FileItem.create( item_id: id, url: url )
     end
-    puts "URLs to add #{urls.size} #{file_items.size}"
     
     update(
       title: remote[:title],
