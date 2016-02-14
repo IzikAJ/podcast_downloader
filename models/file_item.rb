@@ -11,10 +11,24 @@ class FileItem
 
   belongs_to :item
 
-  def load!
-    unless @path && @md5sum == Digest::MD5.hexdigest(File.read(@path))
+  def downloaded?
+    @path && File.exists?(@path) && @md5sum == Digest::MD5.hexdigest(File.read(@path))
+  end
+
+  def download!
+    if downloaded?
+      date = item.published_at.strftime('%Y.%m.%d')
+      name = File.relative_path(App.root, @path)
+      puts "Already loaded at #{date} to file: #{name}"
+    else
       name = "item_#{item.published_at.strftime('%Y.%m.%d')}_#{@id}#{@url.extname}"
       path = CustomDownload.load(@url, File.join(App.root, 'out'), name)
+      begin
+        path = CustomDownload.load(@url, File.join(App.root, 'out'), name)
+      rescue Exception => e
+        puts "Download Error: #{e}"
+        destroy
+      end
       if path
         update(
           path: path,
@@ -22,10 +36,6 @@ class FileItem
           loaded_at: DateTime.now
         )
       end
-    else
-      date = item.published_at.strftime('%Y.%m.%d')
-      name = File.relative_path(App.root, @path)
-      puts "Already loaded at #{date} to file: #{name}"
     end
   end
 end

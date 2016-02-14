@@ -22,6 +22,10 @@ class Item
     item if item.valid? && item.update_from_remote(remote)
   end
 
+  def download
+    loaded = file_items.map(&:downloaded?)
+  end
+
   def update_from_remote remote
     urls = remote[:files] - file_items.map(&:url).map(&:to_s)
     urls.each do |url|
