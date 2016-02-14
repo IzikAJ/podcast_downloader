@@ -21,9 +21,12 @@ class Player
   end
 
   def play(name, paused=false)
+    name = File.join(App.root, name) unless File.exists?(name)
+    name = File.join(App.root, 'out', name) unless File.exists?(name)
+    raise 'File not found!' unless File.exists?(name)
     @p.thread.kill if @p.thread && @p.thread.alive?
     reload_lib
-    @p.load(File.join(Dir.pwd, 'out', name))
+    @p.load(name)
     @p.thread.abort_on_exception = false
     @length = @p.length_in_seconds
     @end_offset = @p.time_per_frame * 10

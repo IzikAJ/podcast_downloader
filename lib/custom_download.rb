@@ -29,8 +29,8 @@ class CustomDownload
     FileUtils.mkdir_p out_path
     path = nil
     if target_name.nil?
-      _path, name = File.split(file)
-      path = File.join(out_path, name)
+      _path, name = File.split(url)
+      path = File.join(out_path, File.basename(name))
       while File.exist?(path)
         ext = File.extname(name)
         base = File.basename(name, ext)
