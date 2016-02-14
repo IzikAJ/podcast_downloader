@@ -15,6 +15,14 @@ class FileItem
     @path && File.exists?(@path) && @md5sum == Digest::MD5.hexdigest(File.read(@path))
   end
 
+  def play!(player = nil)
+    if downloaded?
+      player ||= Player.new
+      player.play(@path)
+      player
+    end
+  end
+
   def download!
     if downloaded?
       date = item.published_at.strftime('%Y.%m.%d')
@@ -22,7 +30,6 @@ class FileItem
       puts "Already loaded at #{date} to file: #{name}"
     else
       name = "item_#{item.published_at.strftime('%Y.%m.%d')}_#{@id}#{@url.extname}"
-      path = CustomDownload.load(@url, File.join(App.root, 'out'), name)
       begin
         path = CustomDownload.load(@url, File.join(App.root, 'out'), name)
       rescue Exception => e

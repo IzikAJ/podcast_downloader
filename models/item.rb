@@ -23,7 +23,14 @@ class Item
   end
 
   def download
-    loaded = file_items.map(&:downloaded?)
+    loaded = file_items.select(&:downloaded?)
+    if loaded.size>0
+      loaded.first
+    else
+      file_items.each do |file|
+        return file if file.download!
+      end
+    end
   end
 
   def update_from_remote remote

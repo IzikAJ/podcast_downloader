@@ -44,7 +44,7 @@ class Player
   def toggle
     if @p.thread && @p.thread.alive?
       @last_pos = @p.position
-      @file = @p.current_song_name
+      @file = @p.mp3.file
       @p.thread.kill
     elsif @last_pos && @file
       play @file, true
