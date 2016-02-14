@@ -12,6 +12,7 @@ class App
 
 end
 
+require_all File.join(App.root, 'lib/**/*.rb')
 require_all File.join(App.root, 'models/**/*.rb')
 require_rel 'initializers/**/*.rb'
 DataMapper.finalize

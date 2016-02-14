@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
-require_relative File.join('config', 'application.rb')
 require 'readline'
-require_relative 'crawler.rb'
+# require_relative File.join('..', 'config', 'application.rb')
+# require_relative 'crawler.rb'
 
 class SPagination
   attr_reader :page
@@ -120,4 +120,4 @@ class Scan
   end
 end
 
-Scan.new
+# Scan.new

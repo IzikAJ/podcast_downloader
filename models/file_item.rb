@@ -11,4 +11,6 @@ class FileItem
 
   belongs_to :item
 
+  def load!
+  end
 end

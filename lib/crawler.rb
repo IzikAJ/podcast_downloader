@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-require_relative File.join('config', 'application.rb')
+# require_relative File.join('config', 'application.rb')
 
 # sources = YamlData.get_hash_file('sources.yml')
 class Crawler
@@ -161,7 +161,6 @@ class Crawler
 
     puts "Added #{@added.size} items"
     puts "Updated #{@updated.size} items"
-
   end
 
 end
